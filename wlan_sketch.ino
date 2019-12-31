@@ -1,4 +1,5 @@
-#include <ESP8266WebServer.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -9,16 +10,14 @@ Adafruit_BME280 bme;
 
 const char* SSID = "<SSID>";
 const char* PSK = "<PSKKEY>";
-
-ESP8266WebServer server(80);
+const char* DB_URL = "http://<host>:8086/write?db=envsensors";
 
 void setup() {
-  //Wire.begin();
   Serial.begin(115200);
   while(!Serial) {
     delay(100);
   }
-  Serial.println("Sensortest");
+  Serial.println("Envsensor");
   delay(100);
   unsigned status;
   
@@ -47,98 +46,46 @@ void setup() {
   }
   Serial.println("");
   Serial.println("WiFi connected..!");
-  Serial.print("Got IP: ");  Serial.println(WiFi.localIP());
-
-  server.on("/", handle_OnConnect);
-  server.onNotFound(handle_NotFound);
-
-  server.begin();
-  Serial.println("HTTP server started");
-}
-
-
- 
-void scan_i2c()
-{
-  byte error, address;
-  int nDevices;
- 
-  Serial.println("Scanning...");
- 
-  nDevices = 0;
-  for(address = 1; address < 127; address++ )
-  {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
- 
-    if (error == 0)
-    {
-      Serial.print("I2C device found at address 0x");
-      if (address<16)
-        Serial.print("0");
-      Serial.print(address,HEX);
-      Serial.println("  !");
- 
-      nDevices++;
-    }
-    else if (error==4)
-    {
-      Serial.print("Unknown error at address 0x");
-      if (address<16)
-        Serial.print("0");
-      Serial.println(address,HEX);
-    }    
-  }
-  if (nDevices == 0)
-    Serial.println("No I2C devices found\n");
-  else
-    Serial.println("done\n");
- 
-  delay(5000);           // wait 5 seconds for next scan
+  Serial.println("Got IP: ");  Serial.println(WiFi.localIP());
+  Serial.println("Chip ip: " + ESP.getChipId());
 }
 
 void loop() {
-  server.handleClient();
+  send_to_influx();
+  delay(1000 * 10);
 }
 
+void send_to_influx() {
+  Serial.println("M0");
+  String influx_data = "bme280,host=";
+  influx_data += ESP.getChipId();
+  Serial.println("M1");
+  influx_data += " temperature=";
+  influx_data += bme.readTemperature();
+  Serial.println("M2");
+  influx_data += ",pressure=";
+  influx_data += bme.readPressure();
+  Serial.println("M3");
+  influx_data += ",humidity=";
+  influx_data += bme.readHumidity() / 100.0F;
+  Serial.println(influx_data);
 
-void handle_OnConnect() {
-  temperature = bme.readTemperature();
-  humidity = bme.readHumidity();
-  pressure = bme.readPressure() / 100.0F;
-  server.send(200, "text/html", SendHTML(temperature,humidity,pressure)); 
-}
+  WiFiClient client;
+  HTTPClient http;
 
-void handle_NotFound(){
-  server.send(404, "text/plain", "Not found");
-}
+  Serial.print("Sending data...\n");
+  if (http.begin(client, DB_URL)) {
+    int httpCode = http.POST(influx_data);
+    if (httpCode > 0) {
+      Serial.printf("[HTTP] POST... code: %d\n", httpCode);
 
-String SendHTML(float temperature,float humidity,float pressure){
-  String ptr = "<!DOCTYPE html> <html>\n";
-  ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
-  ptr +="<title>ESP8266 Weather Station</title>\n";
-  ptr +="<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
-  ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;}\n";
-  ptr +="p {font-size: 24px;color: #444444;margin-bottom: 10px;}\n";
-  ptr +="</style>\n";
-  ptr +="</head>\n";
-  ptr +="<body>\n";
-  ptr +="<div id=\"webpage\">\n";
-  ptr +="<h1>ESP8266 Weather Station</h1>\n";
-  ptr +="<p>Temperature: ";
-  ptr +=temperature;
-  ptr +="&deg;C</p>";
-  ptr +="<p>Humidity: ";
-  ptr +=humidity;
-  ptr +="%</p>";
-  ptr +="<p>Pressure: ";
-  ptr +=pressure;
-  ptr +="hPa</p>";
-  ptr +="</div>\n";
-  ptr +="</body>\n";
-  ptr +="</html>\n";
-  return ptr;
+      if (httpCode == HTTP_CODE_OK) {
+        Serial.println("Uploaded data successfully.");
+      }
+    } else {
+      Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+    }
+
+    http.end();
+  }
 }
