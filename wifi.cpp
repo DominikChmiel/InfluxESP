@@ -12,27 +12,25 @@ ESaveWifi::ESaveWifi() {
 }
 
 bool ESaveWifi::turnOn() {
+	using rtcMem::gRTC;
 	if (m_isOn) {
-		DEBUGLN("!!ERROR!! Wifi is already enabled.");
+		LOGLN("!!ERROR!! Wifi is already enabled.");
 		return true;
 	}
 	// TODO: Check if we can get rid of dhcp by also caching ip + netconfig
-	DEBUGLN("Starting WiFi");
-	// IPAddress ip( IP_A, IP_B, IP_C, IP_OFFSET + config.id.toInt() );
-	// IPAddress gateway( GW_A, GW_B, GW_C, GW_D );
-	// IPAddress subnet( NM_A, NM_B, NM_C, NM_D );
+	LOGLN("Starting WiFi");
 	m_wifi.forceSleepWake();
 	delay( 1 );
 	m_wifi.persistent( false );
 	m_wifi.mode( WIFI_STA );
-	// m_wifi.config( ip, gateway, subnet );
 
-	DEBUGLN("Connecting to ");
-	DEBUGLN(SSID);
+	LOGLN("Connecting to ");
+	LOGLN(SSID);
 	if( rtcMem::isValid() ) {
-		DEBUGLN("Quickconnect");
+		LOGLN("Quickconnect");
+		m_wifi.config( gRTC.ip_addr, gRTC.gateway_addr, gRTC.netmask, gRTC.dns_addr );
     	// The RTC data was good, make a quick connection
-		m_wifi.begin( SSID, PSK, rtcMem::gRTC.channel, rtcMem::gRTC.bssid, true );
+		m_wifi.begin( SSID, PSK, gRTC.channel, gRTC.bssid, true );
 	} else {
     	// The RTC data was not valid, so make a regular connection
 		m_wifi.begin( SSID, PSK );
@@ -47,7 +45,7 @@ bool ESaveWifi::checkStatus() {
 	while( wifiStatus != WL_CONNECTED ) {
 		retries++;
 		if( retries == 100 ) {
-			DEBUGLN( "Quick connect is not working, reset WiFi and try regular connection!" );
+			LOGLN( "Quick connect is not working, reset WiFi and try regular connection!" );
 			m_wifi.disconnect();
 			delay( 10 );
 			m_wifi.forceSleepBegin();
@@ -57,25 +55,29 @@ bool ESaveWifi::checkStatus() {
 			m_wifi.begin( SSID, PSK );
 		}
 		if( retries == 200 ) {
-			DEBUGLN( "Could not connect to WiFi!" );
+			LOGLN( "Could not connect to WiFi!" );
 			m_isOn = false;
 			return false;
 		}
 		delay( 50 );
 		wifiStatus = m_wifi.status();
 	}
-	DEBUGF("WiFi Connected, r:%d\n", retries);
-	DEBUGLN("Got IP: ");  
-	DEBUGLN(m_wifi.localIP());
+	LOGF("WiFi Connected, r:%d\n", retries);
+	LOGLN("Got IP: ");  
+	LOGLN(m_wifi.localIP());
 	// Cache WiFi information
-	gRTC.channel = m_wifi.channel();
+	gRTC.ip_addr = (uint32_t)m_wifi.localIP();
+	gRTC.gateway_addr = (uint32_t)m_wifi.gatewayIP();
+	gRTC.netmask = (uint32_t)m_wifi.subnetMask();
+	gRTC.ip_addr = (uint32_t)m_wifi.dnsIP();
+	gRTC.dns_addr = m_wifi.channel();
 	memcpy( gRTC.bssid, m_wifi.BSSID(), 6 ); // Copy 6 bytes of BSSID (AP's MAC address)
 	m_isOn = true;
 };
 
 void ESaveWifi::shutDown() {
 	if (!m_isOn) {
-		DEBUGLN("!!ERROR!! Wifi is not enabled.");
+		LOGLN("!!ERROR!! Wifi is not enabled.");
 		// No return here, shutdown should be executed anyway
 	}
 	m_wifi.disconnect( true );
