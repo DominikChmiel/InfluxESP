@@ -1,91 +1,89 @@
-#include <ESP8266WiFiMulti.h>
+#include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+#include "rtc_mem.hpp"
+#include "debug.hpp"
+#include "wifi.hpp"
+
+// Parts of this project are based on https://bitbucket.org/2msd/d1mini_sht30_mqtt/src/master/d1mini_sht30_mqtt.ino
+
 float temperature, humidity, pressure, altitude;
 
 Adafruit_BME280 bme;
 
-const char* SSID = "<SSID>";
-const char* PSK = "<PSKKEY>";
-const char* DB_URL = "http://<host>:8086/write?db=envsensors";
 
 void setup() {
-  Serial.begin(115200);
-  while(!Serial) {
-    delay(100);
-  }
-  Serial.println("Envsensor");
-  delay(100);
-  unsigned status;
-  
-  status = bme.begin(0x76);   
-  
+    initDebug();
+
+    ESaveWifi eWifi;
+
+    if (!rtcMem::read()) {
+        DEBUGLN("Reading RTC data failed.");
+    }
+
+    eWifi.turnOn();
+
+    unsigned status;
+
+    status = bme.begin(0x76);   
+
     if (!status) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-        Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
-        Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
-        Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
-        Serial.print("        ID of 0x60 represents a BME 280.\n");
-        Serial.print("        ID of 0x61 represents a BME 680.\n");
+        DEBUGLN("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+        DEBUG("SensorID was: 0x"); 
+        DEBUGLN(bme.sensorID(),16);
+        DEBUGLN("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085");
+        DEBUGLN("   ID of 0x56-0x58 represents a BMP 280,");
+        DEBUGLN("        ID of 0x60 represents a BME 280.");
+        DEBUGLN("        ID of 0x61 represents a BME 680.");
         while (1) delay(10);
     }
 
-  Serial.println("Connecting to ");
-  Serial.println(SSID);
+    String influx_data = "bme280,host=";
+    influx_data += ESP.getChipId();
+    influx_data += " temperature=";
+    influx_data += bme.readTemperature();
+    influx_data += ",pressure=";
+    influx_data += bme.readPressure();
+    influx_data += ",humidity=";
+    influx_data += bme.readHumidity() / 100.0F;
+    DEBUGLN(influx_data);
 
-  //connect to your local wi-fi network
-  WiFi.begin(SSID, PSK);
-
-  //check wi-fi is connected to wi-fi network
-  while (WiFi.status() != WL_CONNECTED) {
-  delay(1000);
-  Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected..!");
-  Serial.println("Got IP: ");  Serial.println(WiFi.localIP());
-  Serial.println("Chip ip: " + ESP.getChipId());
+    DEBUGF("SYSTEM TIME t1 %lu millseconds\n", millis());
+    eWifi.checkStatus();
+    DEBUGF("SYSTEM TIME t2 %lu millseconds\n", millis());
+    send_to_influx(influx_data);
+    rtcMem::write();
+    DEBUGF("SYSTEM TIME fin %lu millseconds\n", millis());
+    ESP.deepSleep((INTERVAL_MS - millis()) * 1000);
+    delay(100); // See https://www.mikrocontroller.net/topic/384345
 }
 
 void loop() {
-  send_to_influx();
-  delay(1000 * 10);
+    DEBUGLN("I should not be here. I should be sleeping.");
+    delay(1000);
 }
 
-void send_to_influx() {
-  Serial.println("M0");
-  String influx_data = "bme280,host=";
-  influx_data += ESP.getChipId();
-  Serial.println("M1");
-  influx_data += " temperature=";
-  influx_data += bme.readTemperature();
-  Serial.println("M2");
-  influx_data += ",pressure=";
-  influx_data += bme.readPressure();
-  Serial.println("M3");
-  influx_data += ",humidity=";
-  influx_data += bme.readHumidity() / 100.0F;
-  Serial.println(influx_data);
+void send_to_influx(String& data) {
 
-  WiFiClient client;
-  HTTPClient http;
+    WiFiClient client;
+    HTTPClient http;
 
-  Serial.print("Sending data...\n");
-  if (http.begin(client, DB_URL)) {
-    int httpCode = http.POST(influx_data);
-    if (httpCode > 0) {
-      Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+    DEBUG("Sending data...\n");
+    if (http.begin(client, DB_URL)) {
+        int httpCode = http.POST(data);
+        if (httpCode > 0) {
+            DEBUGF("[HTTP] POST... code: %d\n", httpCode);
 
-      if (httpCode == HTTP_CODE_OK) {
-        Serial.println("Uploaded data successfully.");
-      }
-    } else {
-      Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+            if (httpCode == HTTP_CODE_OK) {
+                DEBUGLN("Uploaded data successfully.");
+            }
+        } else {
+            DEBUGF("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        }
+
+        http.end();
     }
-
-    http.end();
-  }
 }
