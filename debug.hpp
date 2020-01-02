@@ -8,10 +8,22 @@
 
 void LOGINTER(const char* name);
 #else
-#define LOG(x) while(0) { (void)(x); }
-#define LOGF(x, ...) while(0) { (void)(x); }
-#define LOGLN(x, ...) while(0) { (void)(x); }
-#define LOGINTER(x) while(0) { (void)(x); }
+#define LOG(x)     \
+	while (0) {    \
+		(void)(x); \
+	}
+#define LOGF(x, ...) \
+	while (0) {      \
+		(void)(x);   \
+	}
+#define LOGLN(x, ...) \
+	while (0) {       \
+		(void)(x);    \
+	}
+#define LOGINTER(x) \
+	while (0) {     \
+		(void)(x);  \
+	}
 #endif
 
 class LOGFUNC {
@@ -22,6 +34,7 @@ public:
 	~LOGFUNC() {
 		LOGINTER(m_name);
 	}
+
 private:
 	const char* m_name;
 };

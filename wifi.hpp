@@ -9,7 +9,8 @@ public:
 	bool checkStatus();
 	void shutDown();
 	bool isOn();
+
 private:
 	ESP8266WiFiClass m_wifi;
-	bool m_isOn;
+	bool             m_isOn;
 };
