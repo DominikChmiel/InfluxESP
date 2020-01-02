@@ -42,7 +42,7 @@ using sensor_data = struct sensor_data_s {
 		char full_str[128];
 		snprintf(full_str,
 				 sizeof(full_str),
-				 "temperature=%d.%03d,pressure=%d.%02d,humidity=%d.%02d",
+				 "temperature=%d.%03d,pressure=%d.%02d,humidity=%d.%04d",
 				 getTemp() / 1000,
 				 getTemp() % 1000,
 				 getPress() / 100,
