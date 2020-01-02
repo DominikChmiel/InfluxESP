@@ -28,7 +28,9 @@ bool ESaveWifi::turnOn() {
 	LOGLN(SSID);
 	if( rtcMem::isValid() ) {
 		LOGLN("Quickconnect");
-		m_wifi.config( gRTC.ip_addr, gRTC.gateway_addr, gRTC.netmask, gRTC.dns_addr );
+		// FIXME: WHile this preconfig can speed up things quite a bit, it runs into issues when dns changes
+		// Probably requires fixed router setup/IP Assignment?
+		// m_wifi.config( gRTC.ip_addr, gRTC.gateway_addr, gRTC.netmask, gRTC.dns_addr );
     	// The RTC data was good, make a quick connection
 		m_wifi.begin( SSID, PSK, gRTC.channel, gRTC.bssid, true );
 	} else {

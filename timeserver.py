@@ -1,6 +1,10 @@
 import time
 from aiohttp import web
 
+"""
+	Simple http server that returns the current time as milliseconds
+"""
+
 async def hello(request):
     return web.Response(text=str(int(time.time()*1000)))
 

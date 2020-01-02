@@ -1,18 +1,16 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
 
 #include "rtc_mem.hpp"
 #include "debug.hpp"
 #include "wifi.hpp"
+#include "bme280_aggregator.hpp"
 
 // Parts of this project are based on https://bitbucket.org/2msd/d1mini_sht30_mqtt/src/master/d1mini_sht30_mqtt.ino
 
-float temperature, humidity, pressure, altitude;
 
-Adafruit_BME280 bme;
+BME280Aggregator bme;
 
 
 void setup() {
@@ -28,29 +26,16 @@ void setup() {
 
     eWifi.turnOn();
 
-    unsigned status;
-
-    status = bme.begin(0x76);   
-
-    if (!status) {
-        LOGLN("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-        LOG("SensorID was: 0x"); 
-        LOGLN(bme.sensorID(),16);
-        LOGLN("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085");
-        LOGLN("   ID of 0x56-0x58 represents a BMP 280,");
-        LOGLN("        ID of 0x60 represents a BME 280.");
-        LOGLN("        ID of 0x61 represents a BME 680.");
+    if (!bme.begin(0x76)) {
         while (1) delay(10);
     }
+        
+    auto full_data = bme.readAllSensors();
 
-    String influx_data = "bme280,host=test-";
+    String influx_data = "bme280,host=";
     influx_data += ESP.getChipId();
-    influx_data += " temperature=";
-    influx_data += bme.readTemperature();
-    influx_data += ",pressure=";
-    influx_data += bme.readPressure();
-    influx_data += ",humidity=";
-    influx_data += bme.readHumidity() / 100.0F;
+    influx_data += " ";
+    influx_data += full_data.toString();
     LOGLN(influx_data);
 
     LOGINTER("sensor");
@@ -74,7 +59,18 @@ void loop() {
     delay(1000);
 }
 
-struct timespec get_timestamp_from_server() {
+/*
+    Slighly optimized variant of the usual timespec struct for our purposes:
+
+    Carry microseconds instead of ns + store thousand seconds instead of single
+ */
+struct msec_timespec {
+    time_t  tv_millionsec;   /* MillionSeconds */
+    long    tv_millisec;  /* Milliseconds */
+};
+
+struct msec_timespec get_timestamp_from_server() {
+    struct msec_timespec res = {0, 0};
     WiFiClient client;
     HTTPClient http;
     if (http.begin(client, TS_URL)) {
@@ -91,13 +87,13 @@ struct timespec get_timestamp_from_server() {
                 LOG("TS string: ");
                 LOGLN(data);
                 LOGINTER("Converting");
-                String nsString = data.substring(data.length() - 9);
-                String sString = data.substring(0, data.length() - 9);
-                LOGLN(sString);
-                LOGLN(nsString);
-                return {
-                    sString.toInt(),
-                    nsString.toInt()
+                String micsString = data.substring(data.length() - 9);
+                String ksString = data.substring(0, data.length() - 9);
+                LOGLN(ksString);
+                LOGLN(micsString);
+                res = {
+                    ksString.toInt(),
+                    micsString.toInt()
                 };
             }
         } else {
@@ -105,7 +101,7 @@ struct timespec get_timestamp_from_server() {
         }
         http.end();
     }
-    return {0, 0};
+    return res;
 }
 
 void send_to_influx(String& data) {
@@ -115,10 +111,10 @@ void send_to_influx(String& data) {
 
     LOGINTER("Start TS");
     auto ts = get_timestamp_from_server();
-    if (ts.tv_sec == 0) {
+    if (ts.tv_millionsec == 0) {
         LOGLN("Failed, retrying...");
         ts = get_timestamp_from_server();
-        if (ts.tv_sec == 0) {
+        if (ts.tv_millionsec == 0) {
             LOGLN("Final fail.");
             return;
         }
@@ -128,8 +124,12 @@ void send_to_influx(String& data) {
     HTTPClient http;
 
     // LOGF("TVal: %d | %d", (ts >> 32) & 0xFFFFFFFF, ts & 0xFFFFFFFF);
-    char ts_string[24];
-    snprintf(ts_string, 20, "%d%09d000000", ts.tv_sec, ts.tv_nsec);
+#define TS_LEN 24
+    char ts_string[TS_LEN];
+    snprintf(ts_string, TS_LEN, "%d%09d000000", ts.tv_millionsec, ts.tv_millisec);
+
+    LOG("Reassembled ts: ");
+    LOGLN(String(ts_string));
 
     data += " ";
     data += String(ts_string);
