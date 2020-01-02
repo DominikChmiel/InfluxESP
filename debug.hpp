@@ -14,4 +14,16 @@ void LOGINTER(const char* name);
 #define LOGINTER(x) while(0) { (void)(x); }
 #endif
 
+class LOGFUNC {
+public:
+	LOGFUNC(const char* name) : m_name(name) {
+		LOGINTER(name);
+	};
+	~LOGFUNC() {
+		LOGINTER(m_name);
+	}
+private:
+	const char* m_name;
+};
+
 void initDebug();

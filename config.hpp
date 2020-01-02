@@ -1,5 +1,7 @@
 #pragma once
 
+//#define USE_DEEPSLEEP
+
 #define DEBUG
 #define DEBUG_BAUDRATE 115200
 
@@ -9,3 +11,4 @@
 #define TS_URL "http://<host>:8000/"
 
 #define INTERVAL_MS 30000
+#define STORED_RECORDS 30

@@ -18,6 +18,7 @@ namespace rtcMem {
 	};
 
 	bool read() {
+		LOGFUNC("ReadRTC");
 		if( ESP.rtcUserMemoryRead( 0, (uint32_t*)&gRTC, sizeof( gRTC ) ) ) {
     		// Calculate the CRC of what we just read from RTC memory, but skip the first 4 bytes as that's the checksum itself.
 			uint32_t crc = lcrc32( ((uint8_t*)&gRTC) + 4, sizeof( gRTC ) - 4);
@@ -36,10 +37,12 @@ namespace rtcMem {
 			}
 		}
 		loadedValidMem = false;
+		memset(&gRTC, 0, sizeof(gRTC));
 		return false;
 	};
 
 	bool write() {
+		LOGFUNC("WriteRTC");
 		gRTC.version = MEM_VERSION;
 		gRTC.crc32 = lcrc32( ((uint8_t*)&gRTC) + 4, sizeof( gRTC ) - 4 );
 		return ESP.rtcUserMemoryWrite( 0, (uint32_t*)&gRTC, sizeof( gRTC ) );

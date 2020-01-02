@@ -16,6 +16,7 @@ void initDebug() {
 #endif
 };
 
+#ifdef DEBUG
 void LOGINTER(const char* name) {
 	unsigned newMillis = millis();
 	uint32_t cycles = ESP.getCycleCount();
@@ -28,3 +29,4 @@ void LOGINTER(const char* name) {
 	lastMillis = millis();
 	lastCycles = ESP.getCycleCount();
 }
+#endif
