@@ -21,15 +21,9 @@
 #include "Arduino.h"
 #include <SPI.h>
 #include <Wire.h>
-#include <stdint.h>
+#include <cstdint>
 
 #include "debug.hpp"
-
-/*!
- *  @brief  class constructor
- */
-BME280Aggregator::BME280Aggregator() {
-}
 
 /*!
  *   @brief  Initialise sensor with given parameters / settings
@@ -37,10 +31,10 @@ BME280Aggregator::BME280Aggregator() {
  *   @param theWire the I2C object to use, defaults to &Wire
  *   @returns true on success, false otherwise
  */
-bool BME280Aggregator::begin(uint8_t addr, TwoWire* theWire) {
+auto BME280Aggregator::begin(uint8_t addr, TwoWire* theWire) -> bool {
 	bool status = false;
-	_i2caddr    = addr;
-	_wire       = theWire;
+	m_i2caddr    = addr;
+	m_wire       = theWire;
 	status      = init();
 
 	if (!status) {
@@ -60,13 +54,15 @@ bool BME280Aggregator::begin(uint8_t addr, TwoWire* theWire) {
  *   @brief  Initialise sensor with given parameters / settings
  *   @returns true on success, false otherwise
  */
-bool BME280Aggregator::init() {
+auto BME280Aggregator::init() -> bool {
 	// I2C
-	_wire->begin();
+	m_wire->begin();
 
 	// check if sensor, i.e. the chip ID is correct
-	_sensorID = read8(BME280_REGISTER_CHIPID);
-	if (_sensorID != 0x60) return false;
+	m_sensorId = read8(BME280_REGISTER_CHIPID);
+	if (m_sensorId != 0x60) {
+		return false;
+	}
 
 	// reset the device using soft-reset
 	// this makes sure the IIR is off, etc.
@@ -76,7 +72,9 @@ bool BME280Aggregator::init() {
 	delay(10);
 
 	// if chip is still reading calibration, delay
-	while (isReadingCalibration()) delay(10);
+	while (isReadingCalibration()) {
+		delay(10);
+	}
 
 	readCoefficients();   // read trimming parameters, see DS 4.2.2
 
@@ -105,13 +103,13 @@ void BME280Aggregator::setSampling(sensor_mode      mode,
 								   sensor_sampling  humSampling,
 								   sensor_filter    filter,
 								   standby_duration duration) {
-	_measReg.mode   = mode;
-	_measReg.osrs_t = tempSampling;
-	_measReg.osrs_p = pressSampling;
+	m_measReg.mode   = mode;
+	m_measReg.osrs_t = tempSampling;
+	m_measReg.osrs_p = pressSampling;
 
-	_humReg.osrs_h    = humSampling;
-	_configReg.filter = filter;
-	_configReg.t_sb   = duration;
+	m_humReg.osrs_h    = humSampling;
+	m_configReg.filter = filter;
+	m_configReg.t_sb   = duration;
 
 	// making sure sensor is in sleep mode before setting configuration
 	// as it otherwise may be ignored
@@ -120,9 +118,9 @@ void BME280Aggregator::setSampling(sensor_mode      mode,
 	// you must make sure to also set REGISTER_CONTROL after setting the
 	// CONTROLHUMID register, otherwise the values won't be applied (see
 	// DS 5.4.3)
-	write8(BME280_REGISTER_CONTROLHUMID, _humReg.get());
-	write8(BME280_REGISTER_CONFIG, _configReg.get());
-	write8(BME280_REGISTER_CONTROL, _measReg.get());
+	write8(BME280_REGISTER_CONTROLHUMID, m_humReg.get());
+	write8(BME280_REGISTER_CONFIG, m_configReg.get());
+	write8(BME280_REGISTER_CONTROL, m_measReg.get());
 }
 
 /*!
@@ -131,10 +129,10 @@ void BME280Aggregator::setSampling(sensor_mode      mode,
  *   @param value the value to write to the register
  */
 void BME280Aggregator::write8(byte reg, byte value) {
-	_wire->beginTransmission((uint8_t)_i2caddr);
-	_wire->write((uint8_t)reg);
-	_wire->write((uint8_t)value);
-	_wire->endTransmission();
+	m_wire->beginTransmission(m_i2caddr);
+	m_wire->write(static_cast<uint8_t>(reg));
+	m_wire->write(static_cast<uint8_t>(value));
+	m_wire->endTransmission();
 }
 
 /*!
@@ -142,14 +140,14 @@ void BME280Aggregator::write8(byte reg, byte value) {
  *   @param reg the register address to read from
  *   @returns the data byte read from the device
  */
-uint8_t BME280Aggregator::read8(byte reg) {
+auto BME280Aggregator::read8(byte reg) -> uint8_t {
 	uint8_t value;
 
-	_wire->beginTransmission((uint8_t)_i2caddr);
-	_wire->write((uint8_t)reg);
-	_wire->endTransmission();
-	_wire->requestFrom((uint8_t)_i2caddr, (byte)1);
-	value = _wire->read();
+	m_wire->beginTransmission(m_i2caddr);
+	m_wire->write(static_cast<uint8_t>(reg));
+	m_wire->endTransmission();
+	m_wire->requestFrom(m_i2caddr, static_cast<byte>(1));
+	value = m_wire->read();
 	return value;
 }
 
@@ -158,14 +156,14 @@ uint8_t BME280Aggregator::read8(byte reg) {
  *   @param reg the register address to read from
  *   @returns the 16 bit data value read from the device
  */
-uint16_t BME280Aggregator::read16(byte reg) {
+auto BME280Aggregator::read16(byte reg) -> uint16_t {
 	uint16_t value;
 
-	_wire->beginTransmission((uint8_t)_i2caddr);
-	_wire->write((uint8_t)reg);
-	_wire->endTransmission();
-	_wire->requestFrom((uint8_t)_i2caddr, (byte)2);
-	value = (_wire->read() << 8) | _wire->read();
+	m_wire->beginTransmission(m_i2caddr);
+	m_wire->write(static_cast<uint8_t>(reg));
+	m_wire->endTransmission();
+	m_wire->requestFrom(m_i2caddr, static_cast<byte>(2));
+	value = (m_wire->read() << 8) | m_wire->read();
 
 	return value;
 }
@@ -175,7 +173,7 @@ uint16_t BME280Aggregator::read16(byte reg) {
  *   @param reg the register address to read from
  *   @returns the 16 bit data value read from the device
  */
-uint16_t BME280Aggregator::read16_LE(byte reg) {
+auto BME280Aggregator::read16_LE(byte reg) -> uint16_t {
 	uint16_t temp = read16(reg);
 	return (temp >> 8) | (temp << 8);
 }
@@ -185,8 +183,8 @@ uint16_t BME280Aggregator::read16_LE(byte reg) {
  *   @param reg the register address to read from
  *   @returns the 16 bit data value read from the device
  */
-int16_t BME280Aggregator::readS16(byte reg) {
-	return (int16_t)read16(reg);
+auto BME280Aggregator::readS16(byte reg) -> int16_t {
+	return static_cast<int16_t>(read16(reg));
 }
 
 /*!
@@ -194,116 +192,124 @@ int16_t BME280Aggregator::readS16(byte reg) {
  *   @param reg the register address to read from
  *   @returns the 16 bit data value read from the device
  */
-int16_t BME280Aggregator::readS16_LE(byte reg) {
-	return (int16_t)read16_LE(reg);
+auto BME280Aggregator::readS16_LE(byte reg) -> int16_t {
+	return static_cast<int16_t>(read16_LE(reg));
 }
 
 /*!
  *   @brief  Reads the factory-set coefficients
  */
-void BME280Aggregator::readCoefficients(void) {
-	_bme280_calib.dig_T1 = read16_LE(BME280_REGISTER_DIG_T1);
-	_bme280_calib.dig_T2 = readS16_LE(BME280_REGISTER_DIG_T2);
-	_bme280_calib.dig_T3 = readS16_LE(BME280_REGISTER_DIG_T3);
+void BME280Aggregator::readCoefficients() {
+	m_bme280Calib.dig_T1 = read16_LE(BME280_REGISTER_DIG_T1);
+	m_bme280Calib.dig_T2 = readS16_LE(BME280_REGISTER_DIG_T2);
+	m_bme280Calib.dig_T3 = readS16_LE(BME280_REGISTER_DIG_T3);
 
-	_bme280_calib.dig_P1 = read16_LE(BME280_REGISTER_DIG_P1);
-	_bme280_calib.dig_P2 = readS16_LE(BME280_REGISTER_DIG_P2);
-	_bme280_calib.dig_P3 = readS16_LE(BME280_REGISTER_DIG_P3);
-	_bme280_calib.dig_P4 = readS16_LE(BME280_REGISTER_DIG_P4);
-	_bme280_calib.dig_P5 = readS16_LE(BME280_REGISTER_DIG_P5);
-	_bme280_calib.dig_P6 = readS16_LE(BME280_REGISTER_DIG_P6);
-	_bme280_calib.dig_P7 = readS16_LE(BME280_REGISTER_DIG_P7);
-	_bme280_calib.dig_P8 = readS16_LE(BME280_REGISTER_DIG_P8);
-	_bme280_calib.dig_P9 = readS16_LE(BME280_REGISTER_DIG_P9);
+	m_bme280Calib.dig_P1 = read16_LE(BME280_REGISTER_DIG_P1);
+	m_bme280Calib.dig_P2 = readS16_LE(BME280_REGISTER_DIG_P2);
+	m_bme280Calib.dig_P3 = readS16_LE(BME280_REGISTER_DIG_P3);
+	m_bme280Calib.dig_P4 = readS16_LE(BME280_REGISTER_DIG_P4);
+	m_bme280Calib.dig_P5 = readS16_LE(BME280_REGISTER_DIG_P5);
+	m_bme280Calib.dig_P6 = readS16_LE(BME280_REGISTER_DIG_P6);
+	m_bme280Calib.dig_P7 = readS16_LE(BME280_REGISTER_DIG_P7);
+	m_bme280Calib.dig_P8 = readS16_LE(BME280_REGISTER_DIG_P8);
+	m_bme280Calib.dig_P9 = readS16_LE(BME280_REGISTER_DIG_P9);
 
-	_bme280_calib.dig_H1 = read8(BME280_REGISTER_DIG_H1);
-	_bme280_calib.dig_H2 = readS16_LE(BME280_REGISTER_DIG_H2);
-	_bme280_calib.dig_H3 = read8(BME280_REGISTER_DIG_H3);
-	_bme280_calib.dig_H4 = ((int8_t)read8(BME280_REGISTER_DIG_H4) << 4) | (read8(BME280_REGISTER_DIG_H4 + 1) & 0xF);
-	_bme280_calib.dig_H5 = ((int8_t)read8(BME280_REGISTER_DIG_H5 + 1) << 4) | (read8(BME280_REGISTER_DIG_H5) >> 4);
-	_bme280_calib.dig_H6 = (int8_t)read8(BME280_REGISTER_DIG_H6);
+	m_bme280Calib.dig_H1 = read8(BME280_REGISTER_DIG_H1);
+	m_bme280Calib.dig_H2 = readS16_LE(BME280_REGISTER_DIG_H2);
+	m_bme280Calib.dig_H3 = read8(BME280_REGISTER_DIG_H3);
+	m_bme280Calib.dig_H4 = (static_cast<int8_t>(read8(BME280_REGISTER_DIG_H4)) << 4) | (read8(BME280_REGISTER_DIG_H4 + 1) & 0xF);
+	m_bme280Calib.dig_H5 = (static_cast<int8_t>(read8(BME280_REGISTER_DIG_H5 + 1)) << 4) | (read8(BME280_REGISTER_DIG_H5) >> 4);
+	m_bme280Calib.dig_H6 = static_cast<int8_t>(read8(BME280_REGISTER_DIG_H6));
 }
 
 /*!
  *   @brief return true if chip is busy reading cal data
  *   @returns true if reading calibration, false otherwise
  */
-bool BME280Aggregator::isReadingCalibration(void) {
+auto BME280Aggregator::isReadingCalibration() -> bool {
 	uint8_t const rStatus = read8(BME280_REGISTER_STATUS);
 
 	return (rStatus & (1 << 0)) != 0;
 }
 
-int32_t BME280Aggregator::adaptTemp(uint32_t raw_temp) {
-	int32_t var1, var2;
+auto BME280Aggregator::adaptTemp(uint32_t raw_temp) -> int32_t {
+	int32_t var1;
+	int32_t var2;
 
 	int32_t adc_T = raw_temp;
-	if (adc_T == 0x800000)   // value in case temp measurement was disabled
+	if (adc_T == 0x800000) {   // value in case temp measurement was disabled
 		return INT32_MAX;
+	}
 	adc_T >>= 4;
 
-	var1 = ((((adc_T >> 3) - ((int32_t)_bme280_calib.dig_T1 << 1))) * ((int32_t)_bme280_calib.dig_T2)) >> 11;
+	var1 = ((((adc_T >> 3) - (static_cast<int32_t>(m_bme280Calib.dig_T1) << 1))) * (static_cast<int32_t>(m_bme280Calib.dig_T2))) >> 11;
 
-	var2 = (((((adc_T >> 4) - ((int32_t)_bme280_calib.dig_T1)) * ((adc_T >> 4) - ((int32_t)_bme280_calib.dig_T1))) >> 12) *
-			((int32_t)_bme280_calib.dig_T3)) >>
+	var2 = (((((adc_T >> 4) - (static_cast<int32_t>(m_bme280Calib.dig_T1))) * ((adc_T >> 4) - (static_cast<int32_t>(m_bme280Calib.dig_T1)))) >> 12) *
+			(static_cast<int32_t>(m_bme280Calib.dig_T3))) >>
 		   14;
 
-	t_fine = var1 + var2;
+	m_tFine = var1 + var2;
 
-	return (t_fine * 5 + 128);
+	return (m_tFine * 5 + 128);
 };
 
-int32_t BME280Aggregator::adaptPressure(uint32_t raw_press) {
-	int64_t var1, var2, p;
+auto BME280Aggregator::adaptPressure(uint32_t raw_press) -> int32_t {
+	int64_t var1;
+	int64_t var2;
+	int64_t p;
 
-	if (raw_press == 0x800000)   // value in case pressure measurement was disabled
+	if (raw_press == 0x800000) {   // value in case pressure measurement was disabled
 		return INT32_MAX;
+	}
 	raw_press >>= 4;
 
-	var1 = ((int64_t)t_fine) - 128000;
-	var2 = var1 * var1 * (int64_t)_bme280_calib.dig_P6;
-	var2 = var2 + ((var1 * (int64_t)_bme280_calib.dig_P5) << 17);
-	var2 = var2 + (((int64_t)_bme280_calib.dig_P4) << 35);
-	var1 = ((var1 * var1 * (int64_t)_bme280_calib.dig_P3) >> 8) + ((var1 * (int64_t)_bme280_calib.dig_P2) << 12);
-	var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)_bme280_calib.dig_P1) >> 33;
+	var1 = (static_cast<int64_t>(m_tFine)) - 128000;
+	var2 = var1 * var1 * static_cast<int64_t>(m_bme280Calib.dig_P6);
+	var2 = var2 + ((var1 * static_cast<int64_t>(m_bme280Calib.dig_P5)) << 17);
+	var2 = var2 + ((static_cast<int64_t>(m_bme280Calib.dig_P4)) << 35);
+	var1 = ((var1 * var1 * static_cast<int64_t>(m_bme280Calib.dig_P3)) >> 8) + ((var1 * static_cast<int64_t>(m_bme280Calib.dig_P2)) << 12);
+	var1 = ((((static_cast<int64_t>(1)) << 47) + var1)) * (static_cast<int64_t>(m_bme280Calib.dig_P1)) >> 33;
 
 	if (var1 == 0) {
 		return 0;   // avoid exception caused by division by zero
 	}
 	p    = 1048576 - raw_press;
 	p    = (((p << 31) - var2) * 3125) / var1;
-	var1 = (((int64_t)_bme280_calib.dig_P9) * (p >> 13) * (p >> 13)) >> 25;
-	var2 = (((int64_t)_bme280_calib.dig_P8) * p) >> 19;
+	var1 = ((static_cast<int64_t>(m_bme280Calib.dig_P9)) * (p >> 13) * (p >> 13)) >> 25;
+	var2 = ((static_cast<int64_t>(m_bme280Calib.dig_P8)) * p) >> 19;
 
-	return ((p + var1 + var2) >> 8) + (((int64_t)_bme280_calib.dig_P7) << 4);
+	return ((p + var1 + var2) >> 8) + ((static_cast<int64_t>(m_bme280Calib.dig_P7)) << 4);
 };
 
-int32_t BME280Aggregator::adaptHumidity(uint32_t raw_humidity) {
+auto BME280Aggregator::adaptHumidity(uint32_t raw_humidity) -> int32_t {
 	int32_t v_x1_u32r;
 
-	if (raw_humidity == 0x8000)   // value in case humidity measurement was disabled
+	if (raw_humidity == 0x8000) {   // value in case humidity measurement was disabled
 		return INT32_MAX;
+	}
 
-	v_x1_u32r = (t_fine - ((int32_t)76800));
+	v_x1_u32r = (m_tFine - (static_cast<int32_t>(76800)));
 
-	v_x1_u32r =
-		(((((raw_humidity << 14) - (((int32_t)_bme280_calib.dig_H4) << 20) - (((int32_t)_bme280_calib.dig_H5) * v_x1_u32r)) + ((int32_t)16384)) >>
-		  15) *
-		 (((((((v_x1_u32r * ((int32_t)_bme280_calib.dig_H6)) >> 10) * (((v_x1_u32r * ((int32_t)_bme280_calib.dig_H3)) >> 11) + ((int32_t)32768))) >>
-			 10) +
-			((int32_t)2097152)) *
-			   ((int32_t)_bme280_calib.dig_H2) +
-		   8192) >>
-		  14));
+	v_x1_u32r = (((((raw_humidity << 14) - ((static_cast<int32_t>(m_bme280Calib.dig_H4)) << 20) -
+					((static_cast<int32_t>(m_bme280Calib.dig_H5)) * v_x1_u32r)) +
+				   (static_cast<int32_t>(16384))) >>
+				  15) *
+				 (((((((v_x1_u32r * (static_cast<int32_t>(m_bme280Calib.dig_H6))) >> 10) *
+					  (((v_x1_u32r * (static_cast<int32_t>(m_bme280Calib.dig_H3))) >> 11) + (static_cast<int32_t>(32768)))) >>
+					 10) +
+					(static_cast<int32_t>(2097152))) *
+					   (static_cast<int32_t>(m_bme280Calib.dig_H2)) +
+				   8192) >>
+				  14));
 
-	v_x1_u32r = (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * ((int32_t)_bme280_calib.dig_H1)) >> 4));
+	v_x1_u32r = (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * (static_cast<int32_t>(m_bme280Calib.dig_H1))) >> 4));
 
 	v_x1_u32r = (v_x1_u32r < 0) ? 0 : v_x1_u32r;
 	v_x1_u32r = (v_x1_u32r > 419430400) ? 419430400 : v_x1_u32r;
 	return (v_x1_u32r >> 12);
 };
 
-sensor_data BME280Aggregator::readAllSensors(void) {
+auto BME280Aggregator::readAllSensors() -> sensor_data {
 	// Datasheet MemoryMap has these in ascending order
 	using sensor_regs = struct {
 		uint8_t press_msb;
@@ -315,15 +321,15 @@ sensor_data BME280Aggregator::readAllSensors(void) {
 		uint8_t hum_msb;
 		uint8_t hum_lsb;
 
-		uint32_t getHum() {
+		auto getHum() -> uint32_t {
 			return hum_msb << 8 | hum_lsb;
 		};
 
-		uint32_t getTemp() {
+		auto getTemp() -> uint32_t {
 			return temp_msb << 16 | temp_lsb << 8 | temp_xlsb;
 		};
 
-		uint32_t getPress() {
+		auto getPress() -> uint32_t {
 			return press_msb << 16 | press_lsb << 8 | press_xlsb;
 		};
 	} __attribute__((packed));
@@ -331,14 +337,14 @@ sensor_data BME280Aggregator::readAllSensors(void) {
 
 	sensor_regs raw_regs;
 
-	_wire->beginTransmission((uint8_t)_i2caddr);
-	_wire->write((uint8_t)BME280_REGISTER_PRESSUREDATA);
-	_wire->endTransmission();
-	_wire->requestFrom((uint8_t)_i2caddr, (byte)sizeof(raw_regs));
+	m_wire->beginTransmission(m_i2caddr);
+	m_wire->write(static_cast<uint8_t>(BME280_REGISTER_PRESSUREDATA));
+	m_wire->endTransmission();
+	m_wire->requestFrom(m_i2caddr, static_cast<byte>(sizeof(raw_regs)));
 
-	uint8_t* raw_ptr = (uint8_t*)(&raw_regs);
+	auto* raw_ptr = reinterpret_cast<uint8_t*>(&raw_regs);
 	for (uint8_t i = 0; i < sizeof(raw_regs); i++) {
-		*raw_ptr = _wire->read();
+		*raw_ptr = m_wire->read();
 		raw_ptr++;
 	}
 
@@ -353,6 +359,6 @@ sensor_data BME280Aggregator::readAllSensors(void) {
  *   Returns Sensor ID found by init() for diagnostics
  *   @returns Sensor ID 0x60 for BME280, 0x56, 0x57, 0x58 BMP280
  */
-uint32_t BME280Aggregator::sensorID(void) {
-	return _sensorID;
+auto BME280Aggregator::sensorID() -> uint32_t {
+	return m_sensorId;
 }

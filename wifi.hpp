@@ -5,10 +5,10 @@
 class ESaveWifi {
 public:
 	ESaveWifi();
-	bool turnOn();
-	bool checkStatus();
+	auto turnOn() -> bool;
+	auto checkStatus() -> bool;
 	void shutDown();
-	bool isOn();
+	auto isOn() -> bool;
 
 private:
 	ESP8266WiFiClass m_wifi;

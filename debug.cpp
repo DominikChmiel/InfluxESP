@@ -5,7 +5,7 @@
 unsigned lastMillis = 0;
 uint32_t lastCycles = 0;
 
-void initDebug() {
+void init_debug() {
 #ifdef DEBUG
 	Serial.begin(DEBUG_BAUDRATE);
 	Serial.setTimeout(2000);
@@ -17,7 +17,7 @@ void initDebug() {
 };
 
 #ifdef DEBUG
-void LOGINTER(const char* name) {
+void loginter(const char* name) {
 	unsigned newMillis = millis();
 	uint32_t cycles    = ESP.getCycleCount();
 	if (lastMillis == 0) {

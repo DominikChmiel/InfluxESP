@@ -28,9 +28,9 @@ static_assert(sizeof(rtcData) < 512, "Size of RTC Memory exceeded");
 
 extern rtcData gRTC;
 
-bool isValid();
+auto is_valid() -> bool;
 
-bool read();
+auto read() -> bool;
 
-bool write();
+auto write() -> bool;
 }   // namespace rtcMem

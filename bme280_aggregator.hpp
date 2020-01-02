@@ -20,25 +20,25 @@
 	Humidity: 0-100% => 0-128 => 7 bit
  */
 
-using sensor_data = struct sensor_data {
+using sensor_data = struct sensor_data_s {
 	int32_t temperature;   // : 20;
 	int32_t pressure;      // : 20;
 	int32_t humidity;      // : 16;
 
-	int32_t getTemp() {
+	auto getTemp() -> int32_t {
 		// Returns temperature in .001 DegC steps
 		return (temperature * 10) >> 8;
 	};
-	int32_t getPress() {
+	auto getPress() -> int32_t {
 		// FIXME: Might need widening here
 		return (pressure * 25) >> 6;
 	};
-	int32_t getHum() {
+	auto getHum() -> int32_t {
 		// Returns humidity from 0 to 10000 (where 10k is 100%)
 		return (humidity * 100) >> 10;
 	};
 
-	String toString() {
+	auto toString() -> String {
 		char full_str[128];
 		snprintf(full_str,
 				 sizeof(full_str),
@@ -178,10 +178,8 @@ public:
 		STANDBY_MS_1000 = 0b101
 	};
 
-	// constructors
-	BME280Aggregator();
-	bool begin(uint8_t addr = BME280_ADDRESS, TwoWire *theWire = &Wire);
-	bool init();
+	auto begin(uint8_t addr = BME280_ADDRESS, TwoWire *theWire = &Wire) -> bool;
+	auto init() -> bool;
 
 	void setSampling(sensor_mode      mode          = MODE_NORMAL,
 					 sensor_sampling  tempSampling  = SAMPLING_X16,
@@ -190,42 +188,42 @@ public:
 					 sensor_filter    filter        = FILTER_OFF,
 					 standby_duration duration      = STANDBY_MS_0_5);
 
-	sensor_data readAllSensors(void);
+	auto readAllSensors() -> sensor_data;
 
-	uint32_t sensorID(void);
+	auto sensorID() -> uint32_t;
 
 protected:
-	TwoWire * _wire;   //!< pointer to a TwoWire object
-	SPIClass *_spi;    //!< pointer to SPI object
+	TwoWire * m_wire;   //!< pointer to a TwoWire object
+	SPIClass *m_spi;    //!< pointer to SPI object
 
-	void readCoefficients(void);
-	bool isReadingCalibration(void);
+	void readCoefficients();
+	auto isReadingCalibration() -> bool;
 
-	int32_t adaptTemp(uint32_t raw_temp);
-	int32_t adaptPressure(uint32_t raw_press);
-	int32_t adaptHumidity(uint32_t raw_humidity);
+	auto adaptTemp(uint32_t raw_temp) -> int32_t;
+	auto adaptPressure(uint32_t raw_press) -> int32_t;
+	auto adaptHumidity(uint32_t raw_humidity) -> int32_t;
 
 	void     write8(byte reg, byte value);
-	uint8_t  read8(byte reg);
-	uint16_t read16(byte reg);
-	int16_t  readS16(byte reg);
-	uint16_t read16_LE(byte reg);    // little endian
-	int16_t  readS16_LE(byte reg);   // little endian
+	auto     read8(byte reg) -> uint8_t;
+	auto     read16(byte reg) -> uint16_t;
+	auto     readS16(byte reg) -> int16_t;
+	auto     read16_LE(byte reg) -> uint16_t;   // little endian
+	auto     readS16_LE(byte reg) -> int16_t;   // little endian
 
-	uint8_t _i2caddr;    //!< I2C addr for the TwoWire interface
-	int32_t _sensorID;   //!< ID of the BME Sensor
-	int32_t t_fine;      //!< temperature with high resolution, stored as an attribute
-						 //!< as this is used for temperature compensation reading
-						 //!< humidity and pressure
+	uint8_t m_i2caddr;    //!< I2C addr for the TwoWire interface
+	int32_t m_sensorId;   //!< ID of the BME Sensor
+	int32_t m_tFine;      //!< temperature with high resolution, stored as an attribute
+						  //!< as this is used for temperature compensation reading
+						  //!< humidity and pressure
 
-	bme280_calib_data _bme280_calib;   //!< here calibration data is stored
+	bme280_calib_data m_bme280Calib;   //!< here calibration data is stored
 
 	/**************************************************************************/
 	/*!
 		@brief  config register
 	*/
 	/**************************************************************************/
-	struct config {
+	struct config_s {
 		// inactive duration (standby time) in normal mode
 		// 000 = 0.5 ms
 		// 001 = 62.5 ms
@@ -250,18 +248,18 @@ protected:
 		unsigned int spi3w_en : 1;   ///< unused - don't set
 
 		/// @return combined config register
-		unsigned int get() {
+		auto get() -> unsigned int {
 			return (t_sb << 5) | (filter << 2) | spi3w_en;
 		}
 	};
-	config _configReg;   //!< config register object
+	config_s m_configReg;   //!< config register object
 
 	/**************************************************************************/
 	/*!
 		@brief  ctrl_meas register
 	*/
 	/**************************************************************************/
-	struct ctrl_meas {
+	struct ctrl_meas_s {
 		// temperature oversampling
 		// 000 = skipped
 		// 001 = x1
@@ -287,18 +285,18 @@ protected:
 		unsigned int mode : 2;   ///< device mode
 
 		/// @return combined ctrl register
-		unsigned int get() {
+		auto get() -> unsigned int {
 			return (osrs_t << 5) | (osrs_p << 2) | mode;
 		}
 	};
-	ctrl_meas _measReg;   //!< measurement register object
+	ctrl_meas_s m_measReg;   //!< measurement register object
 
 	/**************************************************************************/
 	/*!
 		@brief  ctrl_hum register
 	*/
 	/**************************************************************************/
-	struct ctrl_hum {
+	struct ctrl_hum_s {
 		/// unused - don't set
 		unsigned int none : 5;
 
@@ -312,9 +310,9 @@ protected:
 		unsigned int osrs_h : 3;   ///< pressure oversampling
 
 		/// @return combined ctrl hum register
-		unsigned int get() {
+		auto get() -> unsigned int {
 			return (osrs_h);
 		}
 	};
-	ctrl_hum _humReg;   //!< hum register object
+	ctrl_hum_s m_humReg;   //!< hum register object
 };

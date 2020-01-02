@@ -18,12 +18,19 @@ ESaveWifi eWifi;
 
 void setup() {
     using rtcMem::gRTC;
-    initDebug();
+    init_debug();
 
     LOGINTER("start");
 
     if (!rtcMem::read()) {
         LOGLN("Reading RTC data failed.");
+    }
+
+    // Check if we were woken up by default_rst => reset internal structs, data is out of date
+    LOGF("Resetreason: %d\n", ESP.getResetInfoPtr()->reason);
+    if (ESP.getResetInfoPtr()->reason == REASON_EXT_SYS_RST) {
+        LOGLN("Ordinary Power ON, resetting stored records");
+        gRTC.stored_records = 0;
     }
 
     bool dump_stored = gRTC.stored_records > RECORD_LIMIT;
@@ -32,7 +39,6 @@ void setup() {
         LOGLN("Starting wifi: Have enough stored.");
         eWifi.turnOn();
     }
-
 
     if (!bme.begin(0x76)) {
         while (1) delay(10);
@@ -45,7 +51,6 @@ void setup() {
     gRTC.stored_records = (gRTC.stored_records + 1) % STORED_RECORDS;
 
     if (dump_stored) {
-
         LOGINTER("sensor");
         eWifi.checkStatus();
         LOGINTER("sending");
@@ -74,11 +79,12 @@ void setup() {
     }
 #ifdef USE_DEEPSLEEP
     ESP.deepSleep(sleepTime * 1000);
-    delay(100); // See https://www.mikrocontroller.net/topic/384345
 #else
+    LOGF("Delaying: %d\n", sleepTime);
     delay(sleepTime);
-    ESP.restart();
+    ESP.reset();
 #endif
+    delay(100); // See https://www.mikrocontroller.net/topic/384345
 }
 
 void loop() {
