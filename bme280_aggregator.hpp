@@ -44,7 +44,7 @@ using sensor_data = struct sensor_data_s {
 				 sizeof(full_str),
 				 "temperature=%d.%03d,pressure=%d.%02d,humidity=%d.%04d",
 				 getTemp() / 1000,
-				 getTemp() % 1000,
+				 getTemp() % 1000 + (1000 * (getTemp() < 0)),	// Correct for negative % returning remainder (=> negative for x < 0)
 				 getPress() / 100,
 				 getPress() % 100,
 				 getHum() / 10000,

@@ -78,7 +78,15 @@ auto BME280Aggregator::init() -> bool {
 
 	readCoefficients();   // read trimming parameters, see DS 4.2.2
 
-	setSampling();   // use defaults
+	// Change to lower sampling modes then default
+	setSampling(
+		MODE_NORMAL,
+		SAMPLING_X8,
+		SAMPLING_X4,
+		SAMPLING_X4,
+		FILTER_OFF,
+		STANDBY_MS_0_5
+	);
 
 	delay(100);
 
@@ -220,6 +228,27 @@ void BME280Aggregator::readCoefficients() {
 	m_bme280Calib.dig_H4 = (static_cast<int8_t>(read8(BME280_REGISTER_DIG_H4)) << 4) | (read8(BME280_REGISTER_DIG_H4 + 1) & 0xF);
 	m_bme280Calib.dig_H5 = (static_cast<int8_t>(read8(BME280_REGISTER_DIG_H5 + 1)) << 4) | (read8(BME280_REGISTER_DIG_H5) >> 4);
 	m_bme280Calib.dig_H6 = static_cast<int8_t>(read8(BME280_REGISTER_DIG_H6));
+
+#if 0
+	LOGF("dig_T1: %10x | %10d\n", m_bme280Calib.dig_T1, m_bme280Calib.dig_T1);
+	LOGF("dig_T2: %10x | %10d\n", m_bme280Calib.dig_T2, m_bme280Calib.dig_T2);
+	LOGF("dig_T3: %10x | %10d\n", m_bme280Calib.dig_T3, m_bme280Calib.dig_T3);
+	LOGF("dig_P1: %10x | %10d\n", m_bme280Calib.dig_P1, m_bme280Calib.dig_P1);
+	LOGF("dig_P2: %10x | %10d\n", m_bme280Calib.dig_P2, m_bme280Calib.dig_P2);
+	LOGF("dig_P3: %10x | %10d\n", m_bme280Calib.dig_P3, m_bme280Calib.dig_P3);
+	LOGF("dig_P4: %10x | %10d\n", m_bme280Calib.dig_P4, m_bme280Calib.dig_P4);
+	LOGF("dig_P5: %10x | %10d\n", m_bme280Calib.dig_P5, m_bme280Calib.dig_P5);
+	LOGF("dig_P6: %10x | %10d\n", m_bme280Calib.dig_P6, m_bme280Calib.dig_P6);
+	LOGF("dig_P7: %10x | %10d\n", m_bme280Calib.dig_P7, m_bme280Calib.dig_P7);
+	LOGF("dig_P8: %10x | %10d\n", m_bme280Calib.dig_P8, m_bme280Calib.dig_P8);
+	LOGF("dig_P9: %10x | %10d\n", m_bme280Calib.dig_P9, m_bme280Calib.dig_P9);
+	LOGF("dig_H1: %10x | %10d\n", m_bme280Calib.dig_H1, m_bme280Calib.dig_H1);
+	LOGF("dig_H2: %10x | %10d\n", m_bme280Calib.dig_H2, m_bme280Calib.dig_H2);
+	LOGF("dig_H3: %10x | %10d\n", m_bme280Calib.dig_H3, m_bme280Calib.dig_H3);
+	LOGF("dig_H4: %10x | %10d\n", m_bme280Calib.dig_H4, m_bme280Calib.dig_H4);
+	LOGF("dig_H5: %10x | %10d\n", m_bme280Calib.dig_H5, m_bme280Calib.dig_H5);
+	LOGF("dig_H6: %10x | %10d\n", m_bme280Calib.dig_H6, m_bme280Calib.dig_H6);
+#endif
 }
 
 /*!

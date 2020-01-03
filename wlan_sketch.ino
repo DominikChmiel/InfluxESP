@@ -43,7 +43,7 @@ void setup() {
     if (!bme.begin(0x76)) {
         while (1) delay(10);
     }
-        
+
     auto full_data = bme.readAllSensors();
 
     // Advance gRTC records
@@ -126,7 +126,7 @@ struct msec_timespec {
     String toString() {
         char ts_string[24];
         snprintf(ts_string, sizeof(ts_string), "%d%09d", tv_millionsec, tv_millisec);
-        return String(ts_string);   
+        return String(ts_string);
     }
 };
 
@@ -168,6 +168,8 @@ bool send_single_data_to_influx(String& data) {
     WiFiClient client;
     HTTPClient http;
 
+    bool res = false;
+
     LOGLN("Sending data...");
     if (http.begin(client, DB_URL)) {
         int httpCode = http.POST(data);
@@ -176,7 +178,7 @@ bool send_single_data_to_influx(String& data) {
 
             if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_NO_CONTENT) {
                 LOGLN("Uploaded data successfully.");
-                return true;
+                res = true;
             }
         } else {
             LOGF("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
@@ -184,7 +186,7 @@ bool send_single_data_to_influx(String& data) {
 
         http.end();
     }
-    return false;
+    return res;
 }
 
 void send_records_to_influx() {
