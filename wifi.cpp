@@ -65,7 +65,7 @@ auto ESaveWifi::checkStatus() -> bool {
 		wifiStatus = m_wifi.status();
 	}
 	LOGF("WiFi Connected, r:%d\n", retries);
-	LOGLN("Got IP: ");  
+	LOGLN("Got IP: ");
 	LOGLN(m_wifi.localIP());
 	// Cache WiFi information
 	gRTC.ip_addr = (uint32_t)m_wifi.localIP();
@@ -75,6 +75,7 @@ auto ESaveWifi::checkStatus() -> bool {
 	gRTC.dns_addr = m_wifi.channel();
 	memcpy( gRTC.bssid, m_wifi.BSSID(), 6 ); // Copy 6 bytes of BSSID (AP's MAC address)
 	m_isOn = true;
+	return true;
 };
 
 void ESaveWifi::shutDown() {

@@ -16,6 +16,17 @@ ESaveWifi eWifi;
 
 #define RECORD_LIMIT (STORED_RECORDS - 10)
 
+void execSleep(uint32_t sleepTime = INTERVAL_MS) {
+#ifdef USE_DEEPSLEEP
+    ESP.deepSleep(sleepTime * 1000);
+#else
+    LOGF("Delaying: %d\n", sleepTime);
+    delay(sleepTime);
+    ESP.reset();
+#endif
+    delay(100); // See https://www.mikrocontroller.net/topic/384345
+}
+
 void setup() {
     using rtcMem::gRTC;
     init_debug();
@@ -40,8 +51,15 @@ void setup() {
         eWifi.turnOn();
     }
 
-    if (!bme.begin(0x76)) {
-        while (1) delay(10);
+    auto retries = 0;
+    while (retries < 100) {
+        if (bme.begin(0x76)) {
+            break;
+        }
+        retries++;
+        delay(100);
+        execSleep();
+        return;
     }
 
     auto full_data = bme.readAllSensors();
@@ -50,9 +68,7 @@ void setup() {
     gRTC.records[gRTC.stored_records] = full_data;
     gRTC.stored_records = (gRTC.stored_records + 1) % STORED_RECORDS;
 
-    if (dump_stored) {
-        LOGINTER("sensor");
-        eWifi.checkStatus();
+    if (dump_stored && eWifi.checkStatus()) {
         LOGINTER("sending");
         send_records_to_influx();
         eWifi.shutDown();
@@ -77,14 +93,7 @@ void setup() {
     } else {
         sleepTime = (INTERVAL_MS - millis());
     }
-#ifdef USE_DEEPSLEEP
-    ESP.deepSleep(sleepTime * 1000);
-#else
-    LOGF("Delaying: %d\n", sleepTime);
-    delay(sleepTime);
-    ESP.reset();
-#endif
-    delay(100); // See https://www.mikrocontroller.net/topic/384345
+    execSleep(sleepTime);
 }
 
 void loop() {
@@ -143,6 +152,10 @@ struct msec_timespec get_timestamp_from_server() {
                 LOGLN("Received timestamp successfully.");
                 String data = http.getString();
                 data.trim();
+                if (data.length() != 13) {
+                  LOGLN("Invalid length of time page. Wrong server?");
+                  return res;
+                }
                 LOG("TS string: ");
                 LOGLN(data);
                 LOGINTER("Converting");
