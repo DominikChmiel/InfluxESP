@@ -33,8 +33,8 @@
  */
 auto BME280Aggregator::begin(uint8_t addr, TwoWire* theWire) -> bool {
 	bool status = false;
-	m_i2caddr    = addr;
-	m_wire       = theWire;
+	m_i2caddr   = addr;
+	m_wire      = theWire;
 	status      = init();
 
 	if (!status) {
@@ -79,14 +79,7 @@ auto BME280Aggregator::init() -> bool {
 	readCoefficients();   // read trimming parameters, see DS 4.2.2
 
 	// Change to lower sampling modes then default
-	setSampling(
-		MODE_NORMAL,
-		SAMPLING_X8,
-		SAMPLING_X4,
-		SAMPLING_X4,
-		FILTER_OFF,
-		STANDBY_MS_0_5
-	);
+	setSampling(MODE_NORMAL, SAMPLING_X8, SAMPLING_X4, SAMPLING_X4, FILTER_OFF, STANDBY_MS_0_5);
 
 	delay(100);
 

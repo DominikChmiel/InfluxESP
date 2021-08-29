@@ -44,7 +44,7 @@ using sensor_data = struct sensor_data_s {
 				 sizeof(full_str),
 				 "temperature=%d.%03d,pressure=%d.%02d,humidity=%d.%04d",
 				 getTemp() / 1000,
-				 getTemp() % 1000 + (1000 * (getTemp() < 0)),	// Correct for negative % returning remainder (=> negative for x < 0)
+				 getTemp() % 1000 + (1000 * (getTemp() < 0)),   // Correct for negative % returning remainder (=> negative for x < 0)
 				 getPress() / 100,
 				 getPress() % 100,
 				 getHum() / 10000,
@@ -203,12 +203,12 @@ protected:
 	auto adaptPressure(uint32_t raw_press) -> int32_t;
 	auto adaptHumidity(uint32_t raw_humidity) -> int32_t;
 
-	void     write8(byte reg, byte value);
-	auto     read8(byte reg) -> uint8_t;
-	auto     read16(byte reg) -> uint16_t;
-	auto     readS16(byte reg) -> int16_t;
-	auto     read16_LE(byte reg) -> uint16_t;   // little endian
-	auto     readS16_LE(byte reg) -> int16_t;   // little endian
+	void write8(byte reg, byte value);
+	auto read8(byte reg) -> uint8_t;
+	auto read16(byte reg) -> uint16_t;
+	auto readS16(byte reg) -> int16_t;
+	auto read16_LE(byte reg) -> uint16_t;   // little endian
+	auto readS16_LE(byte reg) -> int16_t;   // little endian
 
 	uint8_t m_i2caddr;    //!< I2C addr for the TwoWire interface
 	int32_t m_sensorId;   //!< ID of the BME Sensor

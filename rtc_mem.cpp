@@ -29,7 +29,7 @@ auto read() -> bool {
 				loadedValidMem = true;
 				return true;
 			}
-				LOGF("CRC ok, but version failed: Want %x have %x\n", MEM_VERSION, gRTC.version);
+			LOGF("CRC ok, but version failed: Want %x have %x\n", MEM_VERSION, gRTC.version);
 
 		} else {
 			LOGLN("Data in RTC invalid");
