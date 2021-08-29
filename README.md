@@ -1,6 +1,6 @@
 # InfluxESP
 
-Firmware to sample a Bosch BMP280 sensor using an ESP8266 board + storing the recorded data in an influxDB instance.
+Firmware to sample a Bosch BME280 sensor using an ESP8266 board + storing the recorded data in an influxDB instance.
 
 ![Grafana Dashboard](figures/dashboard.png?raw=true "Grafana Dashboard showing collected data")
 
@@ -11,7 +11,7 @@ These instructions will get you up and running with the basic setup.
 ### Prerequisites
 
  - An ESP8266 (Used for testing: nodeMCU v2)
- - A BMP280 Sensor connected to it
+ - A BME280 Sensor connected to it
  - A running InfluxDB instance
 
 ### Installing
